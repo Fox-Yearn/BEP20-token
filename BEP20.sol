@@ -9,7 +9,7 @@ interface IBEP20 {
     function getOwner() external view returns (address);
     function balanceOf(address account) external view returns (uint256);
     function transfer(address recipient, uint256 amount) external returns (bool);
-    function allowance(address _owner, address spender) external view returns (uint256);
+    function allowance(address owner, address spender) external view returns (uint256);
     function approve(address spender, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 
@@ -18,8 +18,6 @@ interface IBEP20 {
 }
 
 contract Context {
-    constructor() {}
-
     function _msgSender() internal view returns (address) {
         return msg.sender;
     }
@@ -35,9 +33,8 @@ contract Ownable is Context {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor() {
-        address msgSender = _msgSender();
-        _owner = msgSender;
-        emit OwnershipTransferred(address(0), msgSender);
+        _owner = _msgSender();
+        emit OwnershipTransferred(address(0), _owner);
     }
 
     function owner() public view returns (address) {
@@ -74,10 +71,10 @@ contract BEP20Token is Context, IBEP20, Ownable {
         _name = "Gully Don";
         _symbol = "Gully";
         _decimals = 18;
-        _totalSupply = 1000000000000000000000000000; // 1 trillion tokens
-        _balances[msg.sender] = _totalSupply;
+        _totalSupply = 1_000_000_000_000_000_000_000_000_000; // 1 trillion tokens
+        _balances[_msgSender()] = _totalSupply;
 
-        emit Transfer(address(0), msg.sender, _totalSupply);
+        emit Transfer(address(0), _msgSender(), _totalSupply);
     }
 
     function getOwner() external view returns (address) {
@@ -189,11 +186,11 @@ contract BEP20Token is Context, IBEP20, Ownable {
     }
 
     function _burnFrom(address account, uint256 amount) internal {
-        require(_allowances[account][_msgSender()] >= amount, "BEP20: burn amount exceeds allowance");
-
-        _burn(account, amount);
+        uint256 currentAllowance = _allowances[account][_msgSender()];
+        require(currentAllowance >= amount, "BEP20: burn amount exceeds allowance");
         unchecked {
-            _approve(account, _msgSender(), _allowances[account][_msgSender()] - amount);
+            _approve(account, _msgSender(), currentAllowance - amount);
         }
+        _burn(account, amount);
     }
 }
