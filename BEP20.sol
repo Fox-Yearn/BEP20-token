@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-// BEP20 interface for standard token functionality
+// BEP20 interface
 interface IBEP20 {
     function totalSupply() external view returns (uint256);
     function decimals() external view returns (uint8);
@@ -18,47 +18,8 @@ interface IBEP20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-// Context for accessing msg.sender and msg.data
-abstract contract Context {
-    function _msgSender() internal view returns (address) {
-        return msg.sender;
-    }
-}
-
-// Ownable for ownership control
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    constructor() {
-        _owner = _msgSender();
-        emit OwnershipTransferred(address(0), _owner);
-    }
-
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    modifier onlyOwner() {
-        require(_owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    function renounceOwnership() public onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-// BEP20 token contract
-contract GullyDon is Context, IBEP20, Ownable {
+// Simple BEP20 token contract
+contract GullyDon is IBEP20 {
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
 
@@ -66,12 +27,19 @@ contract GullyDon is Context, IBEP20, Ownable {
     uint8 private constant _decimals = 18;
     string private constant _name = "Gully Don";
     string private constant _symbol = "Gully";
+    address private immutable _owner;
 
     constructor() {
+        _owner = msg.sender;
         // Initial supply: 1 trillion tokens (1e27 with 18 decimals)
         _totalSupply = 1_000_000_000_000 * 10**_decimals;
-        _balances[_msgSender()] = _totalSupply;
-        emit Transfer(address(0), _msgSender(), _totalSupply);
+        _balances[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == _owner, "GullyDon: caller is not the owner");
+        _;
     }
 
     function name() external pure override returns (string memory) {
@@ -95,11 +63,11 @@ contract GullyDon is Context, IBEP20, Ownable {
     }
 
     function getOwner() external view override returns (address) {
-        return owner();
+        return _owner;
     }
 
     function transfer(address recipient, uint256 amount) external override returns (bool) {
-        _transfer(_msgSender(), recipient, amount);
+        _transfer(msg.sender, recipient, amount);
         return true;
     }
 
@@ -108,36 +76,36 @@ contract GullyDon is Context, IBEP20, Ownable {
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
-        _approve(_msgSender(), spender, amount);
+        _approve(msg.sender, spender, amount);
         return true;
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         _transfer(sender, recipient, amount);
-        uint256 currentAllowance = _allowances[sender][_msgSender()];
+        uint256 currentAllowance = _allowances[sender][msg.sender];
         require(currentAllowance >= amount, "GullyDon: transfer amount exceeds allowance");
         unchecked {
-            _approve(sender, _msgSender(), currentAllowance - amount);
+            _approve(sender, msg.sender, currentAllowance - amount);
         }
         return true;
     }
 
     function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
         return true;
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
-        uint256 currentAllowance = _allowances[_msgSender()][spender];
+        uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "GullyDon: decreased allowance below zero");
         unchecked {
-            _approve(_msgSender(), spender, currentAllowance - subtractedValue);
+            _approve(msg.sender, spender, currentAllowance - subtractedValue);
         }
         return true;
     }
 
     function mint(uint256 amount) external onlyOwner returns (bool) {
-        _mint(_msgSender(), amount);
+        _mint(msg.sender, amount);
         return true;
     }
 
